@@ -1,16 +1,24 @@
 FROM registry.gitlab.com/fdroid/ci-images-server:latest
 
-COPY signing-key.asc /
+RUN apt-get update -y && apt-get install -y \
+    gettext
 
-RUN gpg --import /signing-key.asc
+#COPY signing-key.asc /
+#RUN gpg --import /signing-key.asc
 
-RUN git clone --depth 1 https://gitlab.com/fdroid/fdroidserver.git \
-    && cd fdroidserver \
-    && pip3 install -e . \
-    && python3 setup.py install
+# Get repository
+RUN cd / && \
+    git clone --depth 1 https://gitlab.com/fdroid/fdroidserver.git
 
-VOLUME ["/repo"]
+# Generate mo files
+RUN sed -i -e '/ALL_LINGUAS = de es pt_BR pt_PT tr zh_Hans zh_Hant/s/$/ bo es_AR fa fr it kab ko nb_NO uk/' /fdroidserver/locale/Makefile
+
+# whatever ... works for me :D
+RUN cd /fdroidserver/locale && make compile || true
+RUN cd /fdroidserver/locale && make compile || true
+RUN cd /fdroidserver/locale && make compile || true
+
+# Install fdroid
+RUN cd /fdroidserver && python3 setup.py install
+
 WORKDIR /repo
-
-ENTRYPOINT ["../fdroidserver/fdroid"]
-CMD ["--help"]
